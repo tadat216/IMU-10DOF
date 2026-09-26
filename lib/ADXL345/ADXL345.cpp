@@ -1,5 +1,4 @@
 #include "ADXL345.h"
-#include "Arduino.h"
 
 bool ADXL345::begin() {
     uint8_t dev_data = 0;
