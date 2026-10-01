@@ -2,17 +2,22 @@
 #include <Wire.h>
 // #include "I2CBus.h"
 #include "ADXL345.h"
+#include "ITG3205.h"
 
 const int SDA_PIN = 4;
 const int SKL_PIN = 5;
 
 ADXL345 accel;
+ITG3205 gyro;
 
 void setup() {
   Wire.begin(SDA_PIN, SKL_PIN);
   Serial.begin(115200);
   if(!accel.begin()){
     Serial.printf("Loi voi chip %s\n", accel.name());
+  }
+  if(!gyro.begin()){
+    Serial.printf("Loi voi chip %s\n", gyro.name());
   }
 }
 
@@ -54,7 +59,16 @@ void loop() {
     Serial.println("Loi update data\n");
   }
   else{
-    Serial.printf("x = %.3f, y = %.3f, z = %.3f\n", accel.getAccelX(),  accel.getAccelY(),  accel.getAccelZ());
+    Serial.printf("accel x = %.3f, y = %.3f, z = %.3f\n", accel.getAccelX(),  accel.getAccelY(),  accel.getAccelZ());
+  }
+
+  if(!gyro.update()){
+    Serial.println("Loi update gyro\n");
+  }
+  else{
+    float gx, gy, gz;
+    gyro.getGyro(gx, gy, gz);
+    Serial.printf("gyro  x = %.3f, y = %.3f, z = %.3f (deg/s)\n", gx, gy, gz);
   }
   delay(100);
 }
