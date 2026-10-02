@@ -2,45 +2,57 @@
 
 #pragma once
 #include <stdint.h>
-#include "ISensor.h"
 #include "I2CBus.h"
 
-namespace ADXL345_
-{
-    constexpr uint8_t I2C_ADDR = 0x53;
-
-    constexpr uint8_t DEVID_REG = 0x00;
-    constexpr uint8_t DEVID_VAL = 0xE5;
-
-    constexpr uint8_t RA_POWER_CTL = 0x2D;
-    constexpr uint8_t MEASURE_BIT = 0x03;
-
-    constexpr uint8_t RA_DATA_FORMAT = 0x31;
-    constexpr uint8_t RANGE_BIT = 1;
-    constexpr uint8_t RANGE_LEN = 2;
-    constexpr uint8_t RANGE_2G = 0b00;
-    constexpr float LSB_PER_G_2G  = 256.0f;
-
-    constexpr uint8_t RA_ACCEL_DATA = 0x32;
-    constexpr uint8_t RA_ACCEL_DATA_LEN = 6; 
-}
-
-class ADXL345 : public ISensor
-{
+class ADXL345 {
 public:
-    bool begin() override;
-    bool update() override;
-    const char *name() const override;
 
-    float getAccelX() const { return _x; };
-    float getAccelY() const { return _y; };
-    float getAccelZ() const { return _z; };
+    // --------------- Giá trị truyền vào các hàm set ---------------
+
+    // Range [1:0]: Measurement range
+    static constexpr uint8_t RANGE_2G  = 0x00; // ±2g
+    static constexpr uint8_t RANGE_4G  = 0x01; // ±4g
+    static constexpr uint8_t RANGE_8G  = 0x02; // ±8g
+    static constexpr uint8_t RANGE_16G = 0x03; // ±16g
+
+    // --------------- API ---------------
+
+    // Register DEVID
+    bool getDeviceId(uint8_t &id);
+
+    // Register DATA_FORMAT
+    bool setRange(uint8_t range);
+
+    // Register POWER_CTL
+    bool setMeasureMode(bool enable);
+
+    // Registers DATAX0..DATAZ1
+    bool getAccelRawData(int16_t &x, int16_t &y, int16_t &z);
 
 private:
-    int16_t _rawX = 0;
-    float _x = 0.0f;
-    int16_t _rawY = 0;
-    float _y = 0.0f;
-    int16_t _rawZ = 0;
-    float _z = 0.0f;
+
+    // --------------- REGISTERs ---------------
+    // Địa chỉ I2C 7-bit: 0x53 khi chân SDO/ALT ADDRESS nối GND, 0x1D khi nối mức cao
+    static constexpr uint8_t DEV_ADD = 0x53;
+
+    // Register 0x00 – DEVID
+    // Giá trị mong đợi là 0xE5
+    static constexpr uint8_t REG_DEVID = 0x00;
+
+    // Register 0x2D – POWER_CTL
+    static constexpr uint8_t REG_POWER_CTL = 0x2D;
+
+    // Measure [3]
+    static constexpr uint8_t MEASURE_IDX = 3;
+
+    // Register 0x31 – DATA_FORMAT
+    static constexpr uint8_t REG_DATA_FORMAT = 0x31;
+
+    // Range [1:0]
+    static constexpr uint8_t RANGE_IDX = 0;
+    static constexpr uint8_t RANGE_LEN = 2;
+
+    // Register 0x32..0x37 – 6 registers liên tiếp của accel (X0, X1, Y0, Y1, Z0, Z1)
+    static constexpr uint8_t REG_ACCEL = 0x32;
+    static constexpr uint8_t ACCEL_LEN = 6;
 };
