@@ -18,6 +18,16 @@ bool ADXL345::getDeviceId(uint8_t &id){
     return I2CBus::readByte(DEV_ADD, REG_DEVID, id);
 }
 
+// Register BW_RATE
+
+/**
+ * Rate [3:0]: output data rate, 0x0A = 100 Hz (mặc định)
+ * @see RATE_*
+ */
+bool ADXL345::setDataRate(uint8_t rate){
+    return I2CBus::writeBits(DEV_ADD, REG_BW_RATE, RATE_IDX, RATE_LEN, rate);
+}
+
 // Register DATA_FORMAT
 
 /**
@@ -32,6 +42,15 @@ bool ADXL345::getDeviceId(uint8_t &id){
  */
 bool ADXL345::setRange(uint8_t range){
     return I2CBus::writeBits(DEV_ADD, REG_DATA_FORMAT, RANGE_IDX, RANGE_LEN, range);
+}
+
+/**
+ * FULL_RES [3]
+ * 1: full resolution, giữ 3.9 mg/LSB ở mọi range
+ * 0: 10-bit, thang đo phụ thuộc range
+ */
+bool ADXL345::setFullResolution(bool enable){
+    return I2CBus::writeBit(DEV_ADD, REG_DATA_FORMAT, FULL_RES_IDX, enable);
 }
 
 // Register POWER_CTL

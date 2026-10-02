@@ -1,74 +1,33 @@
 #include <Arduino.h>
 #include <Wire.h>
-// #include "I2CBus.h"
-#include "ADXL345.h"
-#include "ITG3205.h"
+#include <math.h>
+#include "Accelerometer.h"
 
 const int SDA_PIN = 4;
 const int SKL_PIN = 5;
 
-ADXL345 accel;
-ITG3205 gyro;
+Accelerometer accel;
 
 void setup() {
   Wire.begin(SDA_PIN, SKL_PIN);
   Serial.begin(115200);
+  // Chờ IMU ổn định
+  delay(2000);
   if(!accel.begin()){
-    Serial.printf("Loi voi chip %s\n", accel.name());
-  }
-  if(!gyro.begin()){
-    Serial.printf("Loi voi chip %s\n", gyro.name());
+    Serial.printf("Lỗi khởi chạy %s\n", accel.name());
   }
 }
 
 void loop() {
-  // byte error, address;
-  // int nDevices;
-
-  // Serial.println("Scanning...");
-
-  // nDevices = 0;
-  // for(address = 1; address < 127; address++ ) {
-  //   // Truyền tín hiệu đến địa chỉ hiện tại
-  //   Wire.beginTransmission(address);
-  //   error = Wire.endTransmission();
-
-  //   if (error == 0) {
-  //     Serial.print("I2C device found at address 0x");
-  //     if (address < 16)
-  //       Serial.print("0");
-  //     Serial.print(address, HEX);
-  //     Serial.println("  !");
-
-  //     nDevices++;
-  //   }
-  //   else if (error == 4) {
-  //     Serial.print("Unknow error at address 0x");
-  //     if (address < 16)
-  //       Serial.print("0");
-  //     Serial.println(address, HEX);
-  //   }
-  // }
-  // if (nDevices == 0)
-  //   Serial.println("No I2C devices found\n");
-  // else
-  //   Serial.println("done\n");
-
-  // delay(5000); // Chờ 5 giây trước khi quét lại
   if(!accel.update()){
-    Serial.println("Loi update data\n");
+    Serial.println("Không lấy được data của accel");
   }
   else{
-    Serial.printf("accel x = %.3f, y = %.3f, z = %.3f\n", accel.getAccelX(),  accel.getAccelY(),  accel.getAccelZ());
-  }
-
-  if(!gyro.update()){
-    Serial.println("Loi update gyro\n");
-  }
-  else{
-    float gx, gy, gz;
-    gyro.getGyro(gx, gy, gz);
-    Serial.printf("gyro  x = %.3f, y = %.3f, z = %.3f (deg/s)\n", gx, gy, gz);
+    float a[3];
+    accel.getAccel(a[0], a[1], a[2]);
+    // Đứng yên thì |a| ~ 1 g
+    float mag = sqrtf(a[0]*a[0] + a[1]*a[1] + a[2]*a[2]);
+    Serial.printf("(g) x = %7.3f, y = %7.3f, z = %7.3f | |a| = %.3f\n", a[0], a[1], a[2], mag);
   }
   delay(100);
 }
