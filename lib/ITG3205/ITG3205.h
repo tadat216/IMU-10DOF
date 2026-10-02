@@ -29,6 +29,9 @@ public:
 
     // --------------- API ---------------
 
+    // Register WHO_AM_I: đọc được và đúng giá trị mong đợi
+    bool testConnection();
+
     // Register WHO_AM_I
     bool getDeviceId(uint8_t &id);
 
@@ -61,6 +64,7 @@ private:
     static constexpr uint8_t REG_WHO_AM_I = 0x00;
     static constexpr uint8_t WHO_AM_I_IDX = 1;
     static constexpr uint8_t WHO_AM_I_LEN = 6;
+    static constexpr uint8_t WHO_AM_I_VAL = 0x34;
 
     // Register 21 – Sample Rate Divider
     static constexpr uint8_t REG_SMPLRT_DIV = 0x15;

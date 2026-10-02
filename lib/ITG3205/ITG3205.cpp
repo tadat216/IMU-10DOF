@@ -3,6 +3,15 @@
 // Register WHO_AM_I
 
 /**
+ * Đọc ID và so với giá trị cố định 0x34.
+ * false nếu I2C lỗi hoặc ID không khớp.
+ */
+bool ITG3205::testConnection(){
+    uint8_t id = 0;
+    return getDeviceId(id) && id == WHO_AM_I_VAL;
+}
+
+/**
  * ID [6:1]
  * Giá trị mong đợi là 0x34 (0b110100). Đây là giá trị đã dịch về bit 0,
  * còn giá trị cả thanh ghi là 0x68 (ID nằm ở bit 6:1).
