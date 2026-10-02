@@ -1,17 +1,14 @@
 #include "I2CBus.h"
 
-bool I2CBus::writeBit(uint8_t devAdd, uint8_t regAdd, uint8_t value, uint8_t bit_index, TwoWire &wireObj){
-    // Đọc - sửa bit - ghi lại để không xoá các bit khác
+bool I2CBus::writeBit(uint8_t devAdd, uint8_t regAdd, uint8_t bitIndex, uint8_t value, TwoWire &wireObj){
+    return writeBits(devAdd, regAdd, bitIndex, 1, value, wireObj);
+}
+
+bool I2CBus::writeBits(uint8_t devAdd, uint8_t regAdd, uint8_t bitStart, uint8_t len, uint8_t value, TwoWire &wireObj){
     uint8_t reg = 0;
-    if(!readByte(devAdd, regAdd, reg, wireObj)){
-        return false;
-    }
-    if(value){
-        reg |= (1 << bit_index);
-    }
-    else{
-        reg &= ~(1 << bit_index);
-    }
+    if(!readByte(devAdd, regAdd, reg, wireObj)) return false;
+    uint8_t mask = (1 << len) - 1 << bitStart;
+    reg = (reg & ~mask) | (value << bitStart);
     return writeByte(devAdd, regAdd, reg, wireObj);
 }
 
@@ -52,10 +49,13 @@ bool I2CBus::readBytes(uint8_t devAdd, uint8_t regAdd, uint8_t len, uint8_t *dat
     return true;
 }
 
-bool I2CBus::readBit(uint8_t devAdd, uint8_t regAdd, uint8_t bit_index, uint8_t &data, TwoWire &wireObj){
-    if(readBytes(devAdd, regAdd, 1, &data, wireObj)){
-        data &= (1 << bit_index);
-        return true;
-    }
-    return false;
+bool I2CBus::readBit(uint8_t devAdd, uint8_t regAdd, uint8_t bitIndex, uint8_t &data, TwoWire &wireObj){
+    return readBits(devAdd, regAdd, bitIndex, 1, data, wireObj);
+}
+
+bool I2CBus::readBits(uint8_t devAdd, uint8_t regAdd, uint8_t bitStart, uint8_t len, uint8_t &data, TwoWire &wireObj){
+    bool success = readByte(devAdd, regAdd, data, wireObj);
+    data &= (1 << len) - 1 << bitStart;
+    data >>= bitStart;
+    return success;
 }
