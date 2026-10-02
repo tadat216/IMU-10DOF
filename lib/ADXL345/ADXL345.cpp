@@ -3,6 +3,15 @@
 // Register DEVID
 
 /**
+ * Đọc DEVID và so với giá trị cố định 0xE5.
+ * false nếu I2C lỗi hoặc ID không khớp.
+ */
+bool ADXL345::testConnection(){
+    uint8_t id = 0;
+    return getDeviceId(id) && id == DEVID_VAL;
+}
+
+/**
  * Giá trị mong đợi là 0xE5
  */
 bool ADXL345::getDeviceId(uint8_t &id){

@@ -17,6 +17,9 @@ public:
 
     // --------------- API ---------------
 
+    // Register DEVID: đọc được và đúng giá trị mong đợi
+    bool testConnection();
+
     // Register DEVID
     bool getDeviceId(uint8_t &id);
 
@@ -36,8 +39,8 @@ private:
     static constexpr uint8_t DEV_ADD = 0x53;
 
     // Register 0x00 – DEVID
-    // Giá trị mong đợi là 0xE5
     static constexpr uint8_t REG_DEVID = 0x00;
+    static constexpr uint8_t DEVID_VAL = 0xE5;
 
     // Register 0x2D – POWER_CTL
     static constexpr uint8_t REG_POWER_CTL = 0x2D;
