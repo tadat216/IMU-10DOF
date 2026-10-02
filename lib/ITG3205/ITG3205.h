@@ -1,74 +1,97 @@
-// 
 #pragma once
 #include <stdint.h>
-#include "ISensor.h"
 #include "I2CBus.h"
-#include "Arduino.h"
 
-class ITG3205 : public ISensor {
+class ITG3205 {
 public:
-    bool begin() override;
-    bool update() override;
-    const char *name() const override;
 
-    void getGyro(float &x, float &y, float &z);
+    // --------------- Giá trị truyền vào các hàm set ---------------
+
+    // FS_SEL: Gyro Full-Scale Range
+    static constexpr uint8_t FS_SEL_2000 = 0x03; // ±2000°/sec
+
+    // DLPF_CFG: Low Pass Filter Bandwidth / Internal Sample Rate
+    static constexpr uint8_t DLPF_CFG_BW256 = 0x00; // 8kHz
+    static constexpr uint8_t DLPF_CFG_BW188 = 0x01; // 1kHz
+    static constexpr uint8_t DLPF_CFG_BW98  = 0x02; // 1kHz
+    static constexpr uint8_t DLPF_CFG_BW42  = 0x03; // 1kHz
+    static constexpr uint8_t DLPF_CFG_BW20  = 0x04; // 1kHz
+    static constexpr uint8_t DLPF_CFG_BW10  = 0x05; // 1kHz
+    static constexpr uint8_t DLPF_CFG_BW5   = 0x06; // 1kHz
+
+    // CLK_SEL: Device clock source
+    static constexpr uint8_t CLK_SEL_INTERNAL = 0x00;
+    static constexpr uint8_t CLK_SEL_PLL_X    = 0x01;
+    static constexpr uint8_t CLK_SEL_PLL_Y    = 0x02;
+    static constexpr uint8_t CLK_SEL_PLL_Z    = 0x03;
+    static constexpr uint8_t CLK_SEL_PLL_EXT_32K768 = 0x04;
+    static constexpr uint8_t CLK_SEL_PLL_EXT_19M2   = 0x05;
+
+    // --------------- API ---------------
+
+    // Register WHO_AM_I
+    bool getDeviceId(uint8_t &id);
+
+    // Register SMPLRT_DIV
+    bool setSampleRateDivider(uint8_t divider);
+
+    // Register DLPF_FS
+    bool setFullScaleRange(uint8_t range);
+    bool setDLPFBandWidth(uint8_t bandwidth);
+
+    // Register INT_CFG
+    bool setIntDataReadyEnableMode(bool enable);
+
+    // Register INT_STATUS
+    bool getIntDataReadyStatus(bool &ready);
+
+    // Registers Gyro
+    bool getGyroRawData(int16_t &x, int16_t &y, int16_t &z);
+
+    // Register PWR_MGM
+    bool setDeviceClockSource(uint8_t selection);
 
 private:
 
-    // REGISTER
-    const uint8_t DEV_ADD = 0x68;
-    const uint8_t REG_WHO_AM_I = 0x00;
+    // --------------- REGISTERs ---------------
+    static constexpr uint8_t DEV_ADD = 0x68;
 
-    const uint8_t REG_SMPLRT_DIV = 0x15;
-    // Tài liệu Register 21 – Sample Rate Divider
-    // F_sample = F_internal / (SMPLRT_DIV + 1)
-    // Với F_internal = 1K
-    // F_internal: Tốc độ lấy mẫu nội bộ của chip
-    // F_sample: Tốc độ ghi data vào thanh ghi
-    const uint8_t SMPLRT_DIV = 4; // F_sample = 200
+    // Register 00 – WHO_AM_I
+    // ID [6:1]
+    static constexpr uint8_t REG_WHO_AM_I = 0x00;
+    static constexpr uint8_t WHO_AM_I_IDX = 1;
+    static constexpr uint8_t WHO_AM_I_LEN = 6;
 
-    const uint8_t REG_DLPF_FS = 0x16;
-    // FS_SEL: Gyro Full-Scale Range ±2000°/sec
-    const uint8_t FS_SEL = 0x03;
-    const uint8_t FS_SEL_SHIFT = 3;
-    // DLPF_CFG = 0 -> F_internal = 8kHz
-    // DLPF_CFG = 1-6 -> F_internal = 1kHz
-    // 3 bit đầu tiên
-    const uint8_t DLPF_CFG = 3;
+    // Register 21 – Sample Rate Divider
+    static constexpr uint8_t REG_SMPLRT_DIV = 0x15;
 
-    const uint8_t REG_INT_CFG = 0x17;
-    // enable để flag RAW_DATA_RDY được cập nhật
-    const uint8_t BIT_RAW_RDY_EN = 0;
+    // Register 22 – DLPF, Full Scale
+    static constexpr uint8_t REG_DLPF_FS = 0x16;
 
-    const uint8_t REG_INT_STATUS = 0x1A;
-    // Bit flag này để Master hỏi slave đã có data mới chưa, 
-    // ngay sau khi hỏi xong nếu là 1 thì flag sẽ tự 
-    // set lại về 0
-    // Tần suất đọc của master phải lớn hơn slave
-    // Mục đích
-    // 1. Không đọc trùng mẫu vì cơ chế tự set vè 0
-    // 2. Có thể kiểm tra việc đọc sót mẫu vì ta biết được 
-    // F_sample -> kiểm tra khoảng thời gian phát hiện có mẫu
-    // mới có cách nhau lâu hơn thời gian ghi mẫu
-    // không, nếu có thì master đang bỏ sót mẫu
-    const uint8_t BIT_RAW_DATA_RDY = 0;
+    // FS_SEL [4:3]
+    static constexpr uint8_t FS_SEL_IDX = 3;
+    static constexpr uint8_t FS_SEL_LEN = 2;
 
-    const uint8_t REG_GYRO = 0x1D;
-    const uint8_t GYRO_LEN = 6;
+    // DLPF_CFG [2:0]
+    static constexpr uint8_t DLPF_CFG_IDX = 0;
+    static constexpr uint8_t DLPF_CFG_LEN = 3;
 
-    const uint8_t REG_PWR_MGM = 0x3E;
-    const uint8_t CLK_SEL_VAL = 1; 
+    // Register 23 – Interrupt Configuration
+    static constexpr uint8_t REG_INT_CFG = 0x17;
+    static constexpr uint8_t RAW_RDY_EN_IDX = 0;
 
-    // Variables
-    // Lấy mẫu
-    const int16_t N_SAMPLE = 1000;
-    const uint32_t SETTLE_MS = 500;
-    float gyro_x = 0;
-    float gyro_y = 0;
-    float gyro_z = 0;
-    float offset_x = 0;
-    float offset_y = 0;
-    float offset_z = 0;
+    // Register 26 – Interrupt Status
+    static constexpr uint8_t REG_INT_STATUS = 0x1A;
+    static constexpr uint8_t RAW_DATA_RDY_IDX = 0;
 
-    const float LSB = 14.375;
+    // Register 29..34 – 6 registers liên tiếp của Gyro (X_H, X_L, Y_H, Y_L, Z_H, Z_L)
+    static constexpr uint8_t REG_GYRO = 0x1D;
+    static constexpr uint8_t GYRO_LEN = 6;
+
+    // Register 62 – Power Management
+    static constexpr uint8_t REG_PWR_MGM = 0x3E;
+
+    // CLK_SEL [2:0]
+    static constexpr uint8_t CLK_SEL_IDX = 0;
+    static constexpr uint8_t CLK_SEL_LEN = 3;
 };

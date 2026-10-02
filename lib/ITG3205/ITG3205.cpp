@@ -1,84 +1,127 @@
-#include <ITG3205.h>
+#include "ITG3205.h"
 
-bool ITG3205::begin(){
-    uint8_t wai_val = 0;
-    if(!I2CBus::readByte(DEV_ADD, REG_WHO_AM_I, wai_val)){
-        return false;
-    }
-    // Chỉ Bit6..Bit1 là ID (110100), bit 7 và bit 0 không xác định
-    if((wai_val & 0x7E) != DEV_ADD){
-        return false;
-    }
-    offset_x = offset_y = offset_z = 0;
-    // B1. Config các value
-    // Set f_sample
-    if(!I2CBus::writeByte(DEV_ADD, REG_SMPLRT_DIV, SMPLRT_DIV)){
-        return false;
-    }
-    // Set scale range and digital low pass filter configuration
-    if(!I2CBus::writeByte(DEV_ADD, REG_DLPF_FS, (FS_SEL << FS_SEL_SHIFT) | DLPF_CFG)){
-        return false;
-    }
-    if(!I2CBus::writeBit(DEV_ADD, REG_INT_CFG, 1, BIT_RAW_RDY_EN)){
-        return false;
-    }
-    if(!I2CBus::writeByte(DEV_ADD, REG_PWR_MGM, CLK_SEL_VAL)){
-        return false;
-    }
+// Register WHO_AM_I
 
-    // B2. Tính offset
-    // F_sample = 200 Hz -> 1/200 = 0.005s = 5ms
-    // Chờ ESP32 chạy được ít nhất BOOT_WAIT_MS để chip ổn định sau khi cấp nguồn
-    // PLL (1ms) và ZRO (50ms) cần ổn định sau khi đổi CLK_SEL ở trên
-    delay(SETTLE_MS);
-    uint32_t start_sample_time = millis();
-    int16_t sample_taken = 0;
-    float s_x = 0, s_y = 0, s_z = 0;
-    Serial.print("Bắt đầu quá trình tính toán offset con quay, vui lòng để chip đứng yên\n");
-    while(sample_taken < N_SAMPLE){
-        uint8_t is_sample_ready = 0;
-        // Time limit
-        if(millis() - start_sample_time > N_SAMPLE * 10){
-            return false;
-        }
-        if(!I2CBus::readBit(DEV_ADD, REG_INT_STATUS, BIT_RAW_DATA_RDY, is_sample_ready)){
-            return false;
-        }
-        if(!is_sample_ready){
-            delay(1);
-            continue;
-        }
-        if(!update()){
-            return false;
-        }
-        s_x += gyro_x;
-        s_y += gyro_y;
-        s_z += gyro_z;
-        sample_taken++;
-        delay(1);
-    }
-    offset_x = s_x / N_SAMPLE;
-    offset_y = s_y / N_SAMPLE;
-    offset_z = s_z / N_SAMPLE;
-    Serial.print("Hoàn thành lấy offset\n");
+/**
+ * ID [6:1]
+ * Giá trị mong đợi là 0x34 (0b110100). Đây là giá trị đã dịch về bit 0,
+ * còn giá trị cả thanh ghi là 0x68 (ID nằm ở bit 6:1).
+ */
+bool ITG3205::getDeviceId(uint8_t &id){
+    return I2CBus::readBits(DEV_ADD, REG_WHO_AM_I, WHO_AM_I_IDX, WHO_AM_I_LEN, id);
+}
+
+// Register SMPLRT_DIV
+
+/**
+ * SMPLRT_DIV [7:0]
+ * F_sample = F_internal / (SMPLRT_DIV + 1)
+ * F_internal: Tốc độ lấy mẫu nội bộ của chip, set bởi DLPF_CFG
+ * F_sample: Tốc độ ghi data vào thanh ghi
+ * @see setDLPFBandWidth
+ */
+bool ITG3205::setSampleRateDivider(uint8_t divider){
+    return I2CBus::writeByte(DEV_ADD, REG_SMPLRT_DIV, divider);
+}
+
+// Register DLPF_FS
+
+/**
+ * FS_SEL [4:3]
+ * FS_SEL     Gyro Full-Scale Range
+ * 0-2       Reserved
+ * 3         ±2000°/sec
+ * @see FS_SEL_2000
+ */
+bool ITG3205::setFullScaleRange(uint8_t range){
+    return I2CBus::writeBits(DEV_ADD, REG_DLPF_FS, FS_SEL_IDX, FS_SEL_LEN, range);
+}
+
+/**
+ * DLPF_CFG [2:0]
+ * The DLPF_CFG parameter sets the digital low pass filter
+ * configuration. It also determines the internal sampling
+ * rate used by the device as shown in the table below.
+ * | DLPF_CFG | Low Pass Filter Bandwidth | Internal Sample Rate |
+ * |-|-|-|
+ * | 0        |  256Hz                    | 8kHz |
+ * | 1        |  188Hz                    | 1kHz |
+ * | 2        |  98Hz                     | 1kHz |
+ * | 3        |  42Hz                     | 1kHz |
+ * | 4        |  20Hz                     | 1kHz |
+ * | 5        |  10Hz                     | 1kHz |
+ * | 6        |  5Hz                      | 1kHz |
+ * | 7        |  Reserved                 | Reserved |
+ * @see DLPF_CFG_BW*
+ */
+bool ITG3205::setDLPFBandWidth(uint8_t bandwidth){
+    return I2CBus::writeBits(DEV_ADD, REG_DLPF_FS, DLPF_CFG_IDX, DLPF_CFG_LEN, bandwidth);
+}
+
+// Register INT_CFG
+
+/**
+ * RAW_RDY_EN [0]
+ * Bật ngắt "raw data ready" (ngắt báo có data mới trong thanh ghi gyro).
+ * @see REG_INT_CFG
+ * @see RAW_RDY_EN_IDX
+ */
+bool ITG3205::setIntDataReadyEnableMode(bool enable){
+    return I2CBus::writeBit(DEV_ADD, REG_INT_CFG, RAW_RDY_EN_IDX, enable);
+}
+
+// Register INT_STATUS
+
+/**
+ * RAW_DATA_RDY [0]
+ * Flag cho biết chip đã ghi data mới vào thanh ghi gyro chưa.
+ * Chỉ ghi vào ready khi đọc I2C thành công.
+ * @see setIntDataReadyEnableMode
+ */
+bool ITG3205::getIntDataReadyStatus(bool &ready){
+    uint8_t bit = 0;
+    if(!I2CBus::readBit(DEV_ADD, REG_INT_STATUS, RAW_DATA_RDY_IDX, bit)) return false;
+    ready = bit;
     return true;
 }
 
-void ITG3205::getGyro(float &x, float &y, float &z){
-    x = gyro_x;
-    y = gyro_y;
-    z = gyro_z;
-}
+// Gyro registers
 
-bool ITG3205::update(){
+/**
+ * Lấy raw 16 bit của gyro, big-endian (byte High trước, byte Low sau)
+ */
+bool ITG3205::getGyroRawData(int16_t &x, int16_t &y, int16_t &z){
     uint8_t data[GYRO_LEN];
     if(!I2CBus::readBytes(DEV_ADD, REG_GYRO, GYRO_LEN, data)) return false;
-    gyro_x = int16_t((data[0] << 8) | data[1]) / LSB - offset_x;
-    gyro_y = int16_t((data[2] << 8) | data[3]) / LSB - offset_y;
-    gyro_z = int16_t((data[4] << 8) | data[5]) / LSB - offset_z;
+    x = (int16_t)((data[0] << 8) | data[1]);
+    y = (int16_t)((data[2] << 8) | data[3]);
+    z = (int16_t)((data[4] << 8) | data[5]);
     return true;
 }
 
-const char* ITG3205::name() const {
-    return "ITG3205";
+// Register PWR_MGM
+
+/**
+ * CLK_SEL [2:0]
+ * The CLK_SEL setting determines the device clock source, as follows:
+ *
+ * | CLK_SEL | Clock Source |
+ * |-|-|
+ * | 0 |  Internal oscillator |
+ * | 1 |  PLL with X Gyro reference |
+ * | 2 |  PLL with Y Gyro reference |
+ * | 3 |  PLL with Z Gyro reference |
+ * | 4 |  PLL with external 32.768kHz reference |
+ * | 5 |  PLL with external 19.2MHz reference |
+ * | 6 |  Reserved |
+ * | 7 |  Reserved |
+ * On power up, the ITG-3200 defaults to the internal
+ * oscillator. It is highly recommended that the device
+ * is configured to use one of the gyros (or an external
+ * clock) as the clock reference, due to the improved
+ * stability.
+ * @see CLK_SEL_*
+ */
+bool ITG3205::setDeviceClockSource(uint8_t selection){
+    return I2CBus::writeBits(DEV_ADD, REG_PWR_MGM, CLK_SEL_IDX, CLK_SEL_LEN, selection);
 }
