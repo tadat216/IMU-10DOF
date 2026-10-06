@@ -3,16 +3,16 @@
 #include <math.h>
 #include "Accelerometer.h"
 
-const int SDA_PIN = 4;
-const int SKL_PIN = 5;
+const int SDA_PIN = 8;
+const int SCL_PIN = 7;
 
 Accelerometer accel;
 
 void setup() {
-  Wire.begin(SDA_PIN, SKL_PIN);
+  Wire.begin(SDA_PIN, SCL_PIN);
   Serial.begin(115200);
   // Chờ IMU ổn định
-  delay(2000);
+  delay(3000);
   if(!accel.begin()){
     Serial.printf("Lỗi khởi chạy %s\n", accel.name());
   }
