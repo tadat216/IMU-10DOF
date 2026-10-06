@@ -36,31 +36,32 @@ bool Gyroscope::calibrateOffset(){
     delay(SETTLE_MS);
 
     // |raw| <= 32768, N_SAMPLE = 1000 nên int32_t không tràn
-    int32_t sum_x = 0, sum_y = 0, sum_z = 0;
+    int32_t sum[3] = {};
     for(int16_t i = 0; i < N_SAMPLE; i++){
-        int16_t raw_x, raw_y, raw_z;
+        int16_t raw[3] = {};
         if(!waitDataReady(READY_TIMEOUT_MS)) return false;
-        if(!chip.getGyroRawData(raw_x, raw_y, raw_z)) return false;
-        sum_x += raw_x;
-        sum_y += raw_y;
-        sum_z += raw_z;
+        if(!chip.getGyroRawData(raw[0], raw[1], raw[2])) return false;
+        for(uint8_t j = 0; j < 3; j++){
+            sum[j] += raw[j];
+        }
     }
 
-    offset_x = (float)sum_x / N_SAMPLE / LSB_PER_DPS;
-    offset_y = (float)sum_y / N_SAMPLE / LSB_PER_DPS;
-    offset_z = (float)sum_z / N_SAMPLE / LSB_PER_DPS;
+    for(uint8_t i = 0; i < 3; i++){
+        offset[i] = 1.0f * sum[i] / N_SAMPLE / LSB_PER_DPS;
+    }
+
     return true;
 }
 
 bool Gyroscope::update(){
-    int16_t raw_x, raw_y, raw_z;
-    if(!chip.getGyroRawData(raw_x, raw_y, raw_z)) return false;
-    gyro_x = (raw_x / LSB_PER_DPS) - offset_x;
-    gyro_y = (raw_y / LSB_PER_DPS) - offset_y;
-    gyro_z = (raw_z / LSB_PER_DPS) - offset_z;
+    int16_t raw[3] = {};
+    if(!chip.getGyroRawData(raw[0], raw[1], raw[2])) return false;
+    for(uint8_t i = 0; i < 3; i++){
+        gyro[i] = (raw[i] / LSB_PER_DPS) - offset[i];
+    }
     return true;
 }
 
 void Gyroscope::getGyro(float &x, float &y, float &z) const{
-    x = gyro_x, y = gyro_y, z = gyro_z;
+    x = gyro[0], y = gyro[1], z = gyro[2];
 }

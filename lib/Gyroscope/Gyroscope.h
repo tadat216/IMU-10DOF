@@ -31,6 +31,6 @@ private:
     bool waitDataReady(uint32_t timeout_ms);
 
     // --------------- Dữ liệu ---------------
-    float gyro_x = 0, gyro_y = 0, gyro_z = 0;
-    float offset_x = 0, offset_y = 0, offset_z = 0;
+    float gyro[3] = {}; // giá trị x, y, z (°/s)
+    float offset[3] = {}; // off set của x, y, z
 };
