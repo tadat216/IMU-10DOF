@@ -14,11 +14,15 @@ bool Accelerometer::begin(){
 }
 
 bool Accelerometer::update(){
-    int16_t raw_x, raw_y, raw_z;
-    if(!chip.getAccelRawData(raw_x, raw_y, raw_z)) return false;
-    accel_x = raw_x / LSB_PER_G;
-    accel_y = raw_y / LSB_PER_G;
-    accel_z = raw_z / LSB_PER_G;
+    int16_t raw[3];
+    if(!chip.getAccelRawData(raw[0], raw[1], raw[3])) return false;
+    for(int i = 0; i < 3; i++){
+        accel[i] = raw[i] / LSB_PER_G;
+    }
+    return true;
+}
+
+bool Accelerometer::calibrate(uint8_t axis, bool isPositive){
     return true;
 }
 
@@ -27,7 +31,7 @@ const char *Accelerometer::name() const {
 }
 
 void Accelerometer::getAccel(float &x, float &y, float &z) const {
-    x = accel_x;
-    y = accel_y;
-    z = accel_z;
+    x = accel[0];
+    y = accel[1];
+    z = accel[2];
 }

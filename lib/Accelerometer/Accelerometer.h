@@ -11,6 +11,8 @@ public:
     // Đơn vị: g
     void getAccel(float &x, float &y, float &z) const;
 
+    bool calibrate(uint8_t axis, bool isPositive);
+
 private:
     ADXL345 chip;
 
@@ -22,5 +24,7 @@ private:
     static constexpr uint32_t SETTLE_MS = 15;
 
     // --------------- Dữ liệu ---------------
-    float accel_x = 0, accel_y = 0, accel_z = 0;
+    float accel[3] = {};
+    float offset[3] = {};
+    float scale[3] = {};
 };
