@@ -64,6 +64,22 @@ bool ADXL345::setMeasureMode(bool enable){
     return I2CBus::writeBit(DEV_ADD, REG_POWER_CTL, MEASURE_IDX, enable);
 }
 
+// Register INT_SOURCE
+
+/**
+ * DATA_READY [7]
+ * Flag cho biết chip đã ghi data mới vào thanh ghi accel chưa.
+ * Luôn được cập nhật, không cần bật INT_ENABLE. Tự xóa khi đọc DATAX/Y/Z.
+ * Chỉ ghi vào ready khi đọc I2C thành công.
+ * @see getAccelRawData
+ */
+bool ADXL345::getDataReadyStatus(bool &ready){
+    uint8_t bit = 0;
+    if(!I2CBus::readBit(DEV_ADD, REG_INT_SOURCE, DATA_READY_IDX, bit)) return false;
+    ready = bit;
+    return true;
+}
+
 // Accel registers
 
 /**

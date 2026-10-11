@@ -38,6 +38,9 @@ public:
     // Register POWER_CTL
     bool setMeasureMode(bool enable);
 
+    // Register INT_SOURCE
+    bool getDataReadyStatus(bool &ready);
+
     // Registers DATAX0..DATAZ1
     bool getAccelRawData(int16_t &x, int16_t &y, int16_t &z);
 
@@ -63,6 +66,12 @@ private:
 
     // Measure [3]
     static constexpr uint8_t MEASURE_IDX = 3;
+
+    // Register 0x30 – INT_SOURCE
+    static constexpr uint8_t REG_INT_SOURCE = 0x30;
+
+    // DATA_READY [7]
+    static constexpr uint8_t DATA_READY_IDX = 7;
 
     // Register 0x31 – DATA_FORMAT
     static constexpr uint8_t REG_DATA_FORMAT = 0x31;
